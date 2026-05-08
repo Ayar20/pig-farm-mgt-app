@@ -134,9 +134,9 @@ export default function RecordPage({ title, tableName, columns }) {
       {isModalOpen && (
         <div style={{
           position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 100,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem'
+          display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '2rem 1rem', overflowY: 'auto'
         }}>
-          <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '500px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '500px', margin: 'auto' }}>
             <h2>Add New {title}</h2>
             <form onSubmit={handleSubmit}>
               {columns.map((col, i) => (

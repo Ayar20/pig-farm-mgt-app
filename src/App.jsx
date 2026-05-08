@@ -1,12 +1,125 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import RecordPage from './components/RecordPage';
+import { authClient } from './auth';
 
 function App() {
+  const [session, setSession] = useState(null);
+  const [user, setUser] = useState(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(true);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    authClient.getSession().then((result) => {
+      if (result.data?.session && result.data?.user) {
+        setSession(result.data.session);
+        setUser(result.data.user);
+      }
+      setLoading(false);
+    });
+  }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const result = isSignUp
+      ? await authClient.signUp.email({ name: email.split('@')[0] || 'User', email, password })
+      : await authClient.signIn.email({ email, password });
+
+    if (result.error) {
+      alert(result.error.message);
+      return;
+    }
+
+    const sessionResult = await authClient.getSession();
+    if (sessionResult.data?.session && sessionResult.data?.user) {
+      setSession(sessionResult.data.session);
+      setUser(sessionResult.data.user);
+    }
+  };
+
+  const handleSignOut = async () => {
+    await authClient.signOut();
+    setSession(null);
+    setUser(null);
+  };
+
+  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
+
+  if (!session || !user) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--background)' }}>
+        <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '400px' }}>
+          <form onSubmit={handleSubmit}>
+            <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>{isSignUp ? 'Sign Up' : 'Sign In'}</h2>
+            <div className="form-group">
+              <label>Email</label>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label>Password</label>
+              <input
+                type="password"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '1rem' }}>
+              {isSignUp ? 'Sign Up' : 'Sign In'}
+            </button>
+            <p style={{ textAlign: 'center', fontSize: '0.875rem' }}>
+              {isSignUp ? (
+                <>
+                  Already have an account?{' '}
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsSignUp(false);
+                    }}
+                  >
+                    Sign in
+                  </a>
+                </>
+              ) : (
+                <>
+                  Don't have an account?{' '}
+                  <a
+                    href="#"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setIsSignUp(true);
+                    }}
+                  >
+                    Sign up
+                  </a>
+                </>
+              )}
+            </p>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <BrowserRouter>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '1rem', position: 'absolute', top: 0, right: 0, zIndex: 100 }}>
+        <button onClick={handleSignOut} className="btn btn-outline" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}>
+          Sign Out ({user.email})
+        </button>
+      </div>
       <Routes>
         <Route path="/" element={<Layout />}>
           <Route index element={<Dashboard />} />
