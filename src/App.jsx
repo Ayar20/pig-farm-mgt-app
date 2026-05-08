@@ -23,21 +23,31 @@ function App() {
     });
   }, []);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const result = isSignUp
-      ? await authClient.signUp.email({ name: email.split('@')[0] || 'User', email, password })
-      : await authClient.signIn.email({ email, password });
+    setIsSubmitting(true);
+    try {
+      const result = isSignUp
+        ? await authClient.signUp.email({ name: email.split('@')[0] || 'User', email, password })
+        : await authClient.signIn.email({ email, password });
 
-    if (result.error) {
-      alert(result.error.message);
-      return;
-    }
+      if (result.error) {
+        alert(result.error.message);
+        return;
+      }
 
-    const sessionResult = await authClient.getSession();
-    if (sessionResult.data?.session && sessionResult.data?.user) {
-      setSession(sessionResult.data.session);
-      setUser(sessionResult.data.user);
+      const sessionResult = await authClient.getSession();
+      if (sessionResult.data?.session && sessionResult.data?.user) {
+        setSession(sessionResult.data.session);
+        setUser(sessionResult.data.user);
+      }
+    } catch (err) {
+      console.error("Auth error:", err);
+      alert("Authentication error: " + err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -75,8 +85,8 @@ function App() {
                 required
               />
             </div>
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '1rem' }}>
-              {isSignUp ? 'Sign Up' : 'Sign In'}
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '1rem' }} disabled={isSubmitting}>
+              {isSubmitting ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
             </button>
             <p style={{ textAlign: 'center', fontSize: '0.875rem' }}>
               {isSignUp ? (
