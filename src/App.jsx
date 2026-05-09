@@ -12,6 +12,8 @@ function App() {
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
 
   useEffect(() => {
     authClient.getSession().then((result) => {
@@ -29,12 +31,26 @@ function App() {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const result = isSignUp
-        ? await authClient.signUp.email({ name: email.split('@')[0] || 'User', email, password })
-        : await authClient.signIn.email({ email, password });
+      let result;
+      if (isSignUp) {
+        result = await authClient.signUp.email({ 
+          name: email.split('@')[0] || 'User', 
+          email, 
+          password
+        });
+      } else {
+        result = await authClient.signIn.email({ email, password });
+      }
 
-      if (result.error) {
+      if (result?.error) {
         alert(result.error.message);
+        return;
+      }
+
+      if (isSignUp) {
+        alert("Registration successful! Please check your email to verify your account before signing in.");
+        setIsSignUp(false);
+        setPassword('');
         return;
       }
 
@@ -59,7 +75,111 @@ function App() {
 
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
 
+  const isResettingPassword = window.location.pathname === '/reset-password';
+  const [newPassword, setNewPassword] = useState('');
+
+  if (isResettingPassword) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--background)' }}>
+        <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '400px' }}>
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            setIsSubmitting(true);
+            try {
+              const { error } = await authClient.resetPassword({ newPassword });
+              if (error) {
+                alert(error.message);
+              } else {
+                alert('Password reset successful. Please sign in.');
+                window.location.href = '/';
+              }
+            } catch (err) {
+              alert("Error: " + err.message);
+            } finally {
+              setIsSubmitting(false);
+            }
+          }}>
+            <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Reset Password</h2>
+            <div className="form-group">
+              <label>New Password</label>
+              <div style={{ display: 'flex', position: 'relative' }}>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="New Password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  style={{ width: '100%', paddingRight: '4rem' }}
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)' }}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+            </div>
+            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '1rem' }} disabled={isSubmitting}>
+              {isSubmitting ? 'Loading...' : 'Reset Password'}
+            </button>
+            <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.875rem' }}>
+              <a href="/">Back to login</a>
+            </div>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   if (!session || !user) {
+    if (isForgotPassword) {
+      return (
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--background)' }}>
+          <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '400px' }}>
+            <form onSubmit={async (e) => {
+              e.preventDefault();
+              setIsSubmitting(true);
+              try {
+                const { error } = await authClient.forgetPassword({ email, redirectTo: window.location.origin + '/reset-password' });
+                if (error) {
+                  alert(error.message);
+                } else {
+                  alert('Password reset link sent to your email.');
+                  setIsForgotPassword(false);
+                }
+              } catch (err) {
+                alert("Error: " + err.message);
+              } finally {
+                setIsSubmitting(false);
+              }
+            }}>
+              <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Reset Password</h2>
+              <p style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '0.875rem' }}>Enter your email to receive a password reset link.</p>
+              <div className="form-group">
+                <label>Email</label>
+                <input
+                  type="email"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '1rem' }} disabled={isSubmitting}>
+                {isSubmitting ? 'Sending...' : 'Send Reset Link'}
+              </button>
+              <p style={{ textAlign: 'center', fontSize: '0.875rem' }}>
+                <a href="#" onClick={(e) => { e.preventDefault(); setIsForgotPassword(false); }}>
+                  Back to Sign In
+                </a>
+              </p>
+            </form>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--background)' }}>
         <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '400px' }}>
@@ -77,14 +197,33 @@ function App() {
             </div>
             <div className="form-group">
               <label>Password</label>
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div style={{ display: 'flex', position: 'relative' }}>
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  style={{ width: '100%', paddingRight: '4rem' }}
+                />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)' }}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </div>
+            
+            {!isSignUp && (
+              <div style={{ textAlign: 'right', marginBottom: '1rem', fontSize: '0.875rem' }}>
+                <a href="#" onClick={(e) => { e.preventDefault(); setIsForgotPassword(true); }}>
+                  Forgot Password?
+                </a>
+              </div>
+            )}
+
             <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '1rem' }} disabled={isSubmitting}>
               {isSubmitting ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
             </button>
