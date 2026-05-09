@@ -16,13 +16,19 @@ function App() {
   const [isForgotPassword, setIsForgotPassword] = useState(false);
 
   useEffect(() => {
-    authClient.getSession().then((result) => {
-      if (result.data?.session && result.data?.user) {
-        setSession(result.data.session);
-        setUser(result.data.user);
-      }
-      setLoading(false);
-    });
+    authClient.getSession()
+      .then((result) => {
+        if (result?.data?.session && result?.data?.user) {
+          setSession(result.data.session);
+          setUser(result.data.user);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to get session:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
