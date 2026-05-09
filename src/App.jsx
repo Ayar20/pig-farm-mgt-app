@@ -32,6 +32,8 @@ function App() {
   }, []);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const isResettingPassword = window.location.pathname === '/reset-password';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -80,9 +82,6 @@ function App() {
   };
 
   if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
-
-  const isResettingPassword = window.location.pathname === '/reset-password';
-  const [newPassword, setNewPassword] = useState('');
 
   if (isResettingPassword) {
     return (
