@@ -210,7 +210,10 @@ export default function LoginPage({ onAuthenticated }) {
     setSubmitting(true);
     try {
       const displayName = name.trim() || email.split('@')[0] || 'User';
-      const callbackURL = window.location.origin + '/';
+      // Use the production URL as callback to avoid 500 errors if localhost is not registered in Neon Auth
+      const callbackURL = window.location.hostname === 'localhost' 
+        ? 'https://pig-farm-mgt-app.vercel.app' 
+        : window.location.origin;
       const result = await authClient.signUp.email({ name: displayName, email, password, callbackURL });
       if (result?.error) {
         setAlert('error', result.error.message || 'Sign up failed. Please try again.');
@@ -231,10 +234,13 @@ export default function LoginPage({ onAuthenticated }) {
     clearAlert();
     setSubmitting(true);
     try {
+      const resetURL = window.location.hostname === 'localhost' 
+        ? 'https://pig-farm-mgt-app.vercel.app/reset-password' 
+        : window.location.origin + '/reset-password';
       const { error } = await authClient.forgetPassword({
         email,
-        redirectTo: window.location.origin + '/reset-password',
-        callbackURL: window.location.origin + '/reset-password',
+        redirectTo: resetURL,
+        callbackURL: resetURL,
       });
       if (error) {
         setAlert('error', error.message || 'Could not send reset email.');
