@@ -210,7 +210,8 @@ export default function LoginPage({ onAuthenticated }) {
     setSubmitting(true);
     try {
       const displayName = name.trim() || email.split('@')[0] || 'User';
-      const result = await authClient.signUp.email({ name: displayName, email, password });
+      const callbackURL = window.location.origin + '/';
+      const result = await authClient.signUp.email({ name: displayName, email, password, callbackURL });
       if (result?.error) {
         setAlert('error', result.error.message || 'Sign up failed. Please try again.');
         return;
@@ -233,6 +234,7 @@ export default function LoginPage({ onAuthenticated }) {
       const { error } = await authClient.forgetPassword({
         email,
         redirectTo: window.location.origin + '/reset-password',
+        callbackURL: window.location.origin + '/reset-password',
       });
       if (error) {
         setAlert('error', error.message || 'Could not send reset email.');
