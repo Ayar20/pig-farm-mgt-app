@@ -3,17 +3,13 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import RecordPage from './components/RecordPage';
+import LoginPage from './pages/LoginPage';
 import { authClient } from './auth';
 
 function App() {
   const [session, setSession] = useState(null);
   const [user, setUser] = useState(null);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isSignUp, setIsSignUp] = useState(true);
   const [loading, setLoading] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
-  const [isForgotPassword, setIsForgotPassword] = useState(false);
 
   useEffect(() => {
     authClient.getSession()
@@ -24,55 +20,16 @@ function App() {
         }
       })
       .catch((err) => {
-        console.error("Failed to get session:", err);
+        console.error('Failed to get session:', err);
       })
       .finally(() => {
         setLoading(false);
       });
   }, []);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [newPassword, setNewPassword] = useState('');
-  const isResettingPassword = window.location.pathname === '/reset-password';
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    try {
-      let result;
-      if (isSignUp) {
-        result = await authClient.signUp.email({ 
-          name: email.split('@')[0] || 'User', 
-          email, 
-          password
-        });
-      } else {
-        result = await authClient.signIn.email({ email, password });
-      }
-
-      if (result?.error) {
-        alert(result.error.message);
-        return;
-      }
-
-      if (isSignUp) {
-        alert("Registration successful! Please check your email to verify your account before signing in.");
-        setIsSignUp(false);
-        setPassword('');
-        return;
-      }
-
-      const sessionResult = await authClient.getSession();
-      if (sessionResult.data?.session && sessionResult.data?.user) {
-        setSession(sessionResult.data.session);
-        setUser(sessionResult.data.user);
-      }
-    } catch (err) {
-      console.error("Auth error:", err);
-      alert("Authentication error: " + err.message);
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleAuthenticated = (newSession, newUser) => {
+    setSession(newSession);
+    setUser(newUser);
   };
 
   const handleSignOut = async () => {
@@ -81,190 +38,28 @@ function App() {
     setUser(null);
   };
 
-  if (loading) return <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>Loading...</div>;
-
-  if (isResettingPassword) {
+  if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--background)' }}>
-        <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '400px' }}>
-          <form onSubmit={async (e) => {
-            e.preventDefault();
-            setIsSubmitting(true);
-            try {
-              const { error } = await authClient.resetPassword({ newPassword });
-              if (error) {
-                alert(error.message);
-              } else {
-                alert('Password reset successful. Please sign in.');
-                window.location.href = '/';
-              }
-            } catch (err) {
-              alert("Error: " + err.message);
-            } finally {
-              setIsSubmitting(false);
-            }
-          }}>
-            <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Reset Password</h2>
-            <div className="form-group">
-              <label>New Password</label>
-              <div style={{ display: 'flex', position: 'relative' }}>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="New Password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  style={{ width: '100%', paddingRight: '4rem' }}
-                />
-                <button 
-                  type="button" 
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)' }}
-                >
-                  {showPassword ? 'Hide' : 'Show'}
-                </button>
-              </div>
-            </div>
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '1rem' }} disabled={isSubmitting}>
-              {isSubmitting ? 'Loading...' : 'Reset Password'}
-            </button>
-            <div style={{ textAlign: 'center', marginTop: '1rem', fontSize: '0.875rem' }}>
-              <a href="/">Back to login</a>
-            </div>
-          </form>
+      <div style={{
+        display: 'flex', flexDirection: 'column', justifyContent: 'center',
+        alignItems: 'center', height: '100vh', gap: '1rem',
+        backgroundColor: 'var(--background)',
+      }}>
+        <div style={{
+          width: '48px', height: '48px', borderRadius: '0.75rem',
+          background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          animation: 'pulse 1.5s ease-in-out infinite',
+        }}>
+          <span style={{ fontSize: '1.5rem' }}>🐷</span>
         </div>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Loading Pig Farm Manager…</p>
       </div>
     );
   }
 
   if (!session || !user) {
-    if (isForgotPassword) {
-      return (
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--background)' }}>
-          <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '400px' }}>
-            <form onSubmit={async (e) => {
-              e.preventDefault();
-              setIsSubmitting(true);
-              try {
-                const { error } = await authClient.forgetPassword({ email, redirectTo: window.location.origin + '/reset-password' });
-                if (error) {
-                  alert(error.message);
-                } else {
-                  alert('Password reset link sent to your email.');
-                  setIsForgotPassword(false);
-                }
-              } catch (err) {
-                alert("Error: " + err.message);
-              } finally {
-                setIsSubmitting(false);
-              }
-            }}>
-              <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>Reset Password</h2>
-              <p style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '0.875rem' }}>Enter your email to receive a password reset link.</p>
-              <div className="form-group">
-                <label>Email</label>
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-              <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '1rem' }} disabled={isSubmitting}>
-                {isSubmitting ? 'Sending...' : 'Send Reset Link'}
-              </button>
-              <p style={{ textAlign: 'center', fontSize: '0.875rem' }}>
-                <a href="#" onClick={(e) => { e.preventDefault(); setIsForgotPassword(false); }}>
-                  Back to Sign In
-                </a>
-              </p>
-            </form>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: 'var(--background)' }}>
-        <div className="card animate-fade-in" style={{ width: '100%', maxWidth: '400px' }}>
-          <form onSubmit={handleSubmit}>
-            <h2 style={{ marginBottom: '1.5rem', textAlign: 'center' }}>{isSignUp ? 'Sign Up' : 'Sign In'}</h2>
-            <div className="form-group">
-              <label>Email</label>
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Password</label>
-              <div style={{ display: 'flex', position: 'relative' }}>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  style={{ width: '100%', paddingRight: '4rem' }}
-                />
-                <button 
-                  type="button" 
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--primary)' }}
-                >
-                  {showPassword ? 'Hide' : 'Show'}
-                </button>
-              </div>
-            </div>
-            
-            {!isSignUp && (
-              <div style={{ textAlign: 'right', marginBottom: '1rem', fontSize: '0.875rem' }}>
-                <a href="#" onClick={(e) => { e.preventDefault(); setIsForgotPassword(true); }}>
-                  Forgot Password?
-                </a>
-              </div>
-            )}
-
-            <button type="submit" className="btn btn-primary" style={{ width: '100%', marginBottom: '1rem' }} disabled={isSubmitting}>
-              {isSubmitting ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
-            </button>
-            <p style={{ textAlign: 'center', fontSize: '0.875rem' }}>
-              {isSignUp ? (
-                <>
-                  Already have an account?{' '}
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setIsSignUp(false);
-                    }}
-                  >
-                    Sign in
-                  </a>
-                </>
-              ) : (
-                <>
-                  Don't have an account?{' '}
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setIsSignUp(true);
-                    }}
-                  >
-                    Sign up
-                  </a>
-                </>
-              )}
-            </p>
-          </form>
-        </div>
-      </div>
-    );
+    return <LoginPage onAuthenticated={handleAuthenticated} />;
   }
 
   return (
