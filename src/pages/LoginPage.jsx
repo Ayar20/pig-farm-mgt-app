@@ -182,6 +182,14 @@ export default function LoginPage({ onAuthenticated }) {
         setAlert('error', result.error.message || 'Sign in failed. Please check your credentials.');
         return;
       }
+      
+      // Check if sign-in response contains session/user directly (highly robust for localhost)
+      if (result?.data?.session && result?.data?.user) {
+        onAuthenticated(result.data.session, result.data.user);
+        return;
+      }
+
+      // Fallback: check session via getSession if response body doesn't contain it
       const sessionResult = await authClient.getSession();
       if (sessionResult?.data?.session && sessionResult?.data?.user) {
         onAuthenticated(sessionResult.data.session, sessionResult.data.user);
@@ -268,7 +276,9 @@ export default function LoginPage({ onAuthenticated }) {
     }
     setSubmitting(true);
     try {
-      const { error } = await authClient.resetPassword({ newPassword });
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      const { error } = await authClient.resetPassword({ newPassword, token });
       if (error) {
         setAlert('error', error.message || 'Password reset failed.');
       } else {

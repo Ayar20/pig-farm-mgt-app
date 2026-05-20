@@ -1,3 +1,5 @@
 import { createAuthClient } from '@neondatabase/neon-js/auth';
 
-export const authClient = createAuthClient(import.meta.env.VITE_NEON_AUTH_URL);
+const authUrl = import.meta.env.VITE_NEON_AUTH_URL || 'https://fallback.neonauth.tech';
+
+export const authClient = createAuthClient(authUrl);
