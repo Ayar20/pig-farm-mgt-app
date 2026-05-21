@@ -264,17 +264,25 @@ export default function LoginPage({ onAuthenticated }) {
     setSubmitting(true);
     try {
       const displayName = name.trim() || email.split('@')[0] || 'User';
-      // Use the production URL as callback to avoid 500 errors if localhost is not registered in Neon Auth
-      const callbackURL = window.location.hostname === 'localhost' 
-        ? 'https://pig-farm-mgt-app.vercel.app' 
-        : window.location.origin;
-      const result = await authClient.signUp.email({ name: displayName, email, password, callbackURL });
+      const result = await authClient.signUp.email({ name: displayName, email, password });
       if (result?.error) {
         setAlert('error', result.error.message || 'Sign up failed. Please try again.');
         return;
       }
-      setAlert('success', 'Account created! Please check your email and click the verification link before signing in.');
-      setTimeout(() => switchView(VIEW.SIGN_IN), 4000);
+      // Email verification is disabled — sign the user in immediately
+      if (result?.data?.session && result?.data?.user) {
+        onAuthenticated(result.data.session, result.data.user);
+        return;
+      }
+      // Fallback: try getSession in case sign-up returned a cookie-based session
+      const sessionResult = await authClient.getSession();
+      if (sessionResult?.data?.session && sessionResult?.data?.user) {
+        onAuthenticated(sessionResult.data.session, sessionResult.data.user);
+        return;
+      }
+      // Last resort: send to sign-in
+      setAlert('success', 'Account created! You can now sign in.');
+      setTimeout(() => switchView(VIEW.SIGN_IN), 2000);
     } catch (err) {
       setAlert('error', err.message || 'An unexpected error occurred.');
     } finally {
