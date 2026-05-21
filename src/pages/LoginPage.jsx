@@ -111,6 +111,66 @@ function InputField({ id, label, type, value, onChange, placeholder, required, i
   );
 }
 
+// ── Toggle Password Button ─────────────────────────────────────────────────────
+const ToggleBtn = ({ show, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    aria-label={show ? 'Hide password' : 'Show password'}
+    style={{
+      position: 'absolute', right: '0.75rem', top: '50%',
+      transform: 'translateY(-50%)', background: 'none', border: 'none',
+      cursor: 'pointer', color: 'var(--text-muted)', display: 'flex',
+      padding: '0.25rem',
+    }}
+  >
+    {show ? <EyeOffIcon /> : <EyeIcon />}
+  </button>
+);
+
+// ── Shared layout wrapper ────────────────────────────────────────────────────
+const Shell = ({ children, title, subtitle }) => (
+  <div style={{
+    minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: 'var(--background)', padding: '1.5rem',
+    backgroundImage: 'radial-gradient(ellipse at 20% 50%, rgba(79,70,229,0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(236,72,153,0.06) 0%, transparent 40%)',
+  }}>
+    <div className="animate-fade-in" style={{ width: '100%', maxWidth: '420px' }}>
+      {/* Brand header */}
+      <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+        <div style={{
+          width: '64px', height: '64px', borderRadius: '1rem', margin: '0 auto 1rem',
+          background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          boxShadow: '0 8px 24px rgba(79,70,229,0.3)', color: 'white',
+        }}>
+          <PigIcon />
+        </div>
+        <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem', letterSpacing: '-0.02em' }}>
+          Pig Farm Manager
+        </h1>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+          {subtitle || 'Manage your farm with ease'}
+        </p>
+      </div>
+
+      {/* Card */}
+      <div className="card" style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.12)', borderRadius: '1.25rem' }}>
+        {title && (
+          <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: 700 }}>
+            {title}
+          </h2>
+        )}
+        {children}
+      </div>
+
+      <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+        © {new Date().getFullYear()} Pig Farm Manager · Secure & Private
+      </p>
+    </div>
+  </div>
+);
+
 // ── View modes ─────────────────────────────────────────────────────────────────
 const VIEW = { SIGN_IN: 'signin', SIGN_UP: 'signup', FORGOT: 'forgot', RESET: 'reset' };
 
@@ -155,21 +215,7 @@ export default function LoginPage({ onAuthenticated }) {
 
   const strength = (view === VIEW.SIGN_UP || view === VIEW.RESET) ? passwordStrength(view === VIEW.RESET ? newPassword : password) : null;
 
-  const ToggleBtn = ({ show, onClick }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-label={show ? 'Hide password' : 'Show password'}
-      style={{
-        position: 'absolute', right: '0.75rem', top: '50%',
-        transform: 'translateY(-50%)', background: 'none', border: 'none',
-        cursor: 'pointer', color: 'var(--text-muted)', display: 'flex',
-        padding: '0.25rem',
-      }}
-    >
-      {show ? <EyeOffIcon /> : <EyeIcon />}
-    </button>
-  );
+
 
   // ── Sign In ──────────────────────────────────────────────────────────────────
   const handleSignIn = async (e) => {
@@ -292,48 +338,7 @@ export default function LoginPage({ onAuthenticated }) {
     }
   };
 
-  // ── Shared layout wrapper ────────────────────────────────────────────────────
-  const Shell = ({ children, title, subtitle }) => (
-    <div style={{
-      minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      backgroundColor: 'var(--background)', padding: '1.5rem',
-      backgroundImage: 'radial-gradient(ellipse at 20% 50%, rgba(79,70,229,0.08) 0%, transparent 50%), radial-gradient(ellipse at 80% 20%, rgba(236,72,153,0.06) 0%, transparent 40%)',
-    }}>
-      <div className="animate-fade-in" style={{ width: '100%', maxWidth: '420px' }}>
-        {/* Brand header */}
-        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-          <div style={{
-            width: '64px', height: '64px', borderRadius: '1rem', margin: '0 auto 1rem',
-            background: 'linear-gradient(135deg, var(--primary), var(--secondary))',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 8px 24px rgba(79,70,229,0.3)', color: 'white',
-          }}>
-            <PigIcon />
-          </div>
-          <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem', letterSpacing: '-0.02em' }}>
-            Pig Farm Manager
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
-            {subtitle || 'Manage your farm with ease'}
-          </p>
-        </div>
 
-        {/* Card */}
-        <div className="card" style={{ boxShadow: '0 20px 60px rgba(0,0,0,0.12)', borderRadius: '1.25rem' }}>
-          {title && (
-            <h2 style={{ marginBottom: '1.5rem', fontSize: '1.25rem', fontWeight: 700 }}>
-              {title}
-            </h2>
-          )}
-          {children}
-        </div>
-
-        <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-          © {new Date().getFullYear()} Pig Farm Manager · Secure & Private
-        </p>
-      </div>
-    </div>
-  );
 
   // ── RESET PASSWORD VIEW ──────────────────────────────────────────────────────
   if (view === VIEW.RESET) {
