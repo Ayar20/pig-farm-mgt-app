@@ -12,9 +12,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Pig Farm Management',
-        short_name: 'Pig Farm',
-        description: 'Manage your pig farm operations efficiently',
+        name: 'Animal Farm Management Portal',
+        short_name: 'Animal Farm',
+        description: 'Manage your animal farm operations efficiently',
         theme_color: '#4f46e5',
         background_color: '#f8fafc',
         display: 'standalone',

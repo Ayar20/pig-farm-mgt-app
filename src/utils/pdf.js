@@ -49,7 +49,7 @@ export async function generateAnalyticsPDF(title, elementId) {
     pdf.setTextColor(255, 255, 255);
     pdf.setFontSize(18);
     pdf.setFont('helvetica', 'bold');
-    pdf.text(`🐷 PigFarm Management System`, 12, 16);
+    pdf.text(`🐾 Animal Farm Management Portal`, 12, 16);
     
     pdf.setTextColor(156, 163, 175);
     pdf.setFontSize(10);

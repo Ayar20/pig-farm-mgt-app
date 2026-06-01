@@ -69,7 +69,7 @@ function App() {
         }}>
           <span style={{ fontSize: '1.5rem' }}>🐷</span>
         </div>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Loading Pig Farm Manager…</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>Loading Animal Farm Management Portal…</p>
       </div>
     );
   }

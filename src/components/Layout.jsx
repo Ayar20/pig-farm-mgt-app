@@ -115,7 +115,7 @@ export default function Layout({ onSignOut, userEmail }) {
         zIndex: 90
       }}>
         <h2 style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', margin: 0 }}>
-          <PiggyBank size={18} /> PigFarm Mgt
+          <PiggyBank size={18} /> Animal Farm Portal
         </h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <button 
@@ -133,7 +133,7 @@ export default function Layout({ onSignOut, userEmail }) {
           {/* Logo + bell */}
           <div style={{ padding: '1rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <h2 style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', flex: 1, margin: 0 }}>
-              <PiggyBank /> PigFarm Mgt
+              <PiggyBank /> Animal Farm Portal
             </h2>
 
             {/* Notification Bell */}

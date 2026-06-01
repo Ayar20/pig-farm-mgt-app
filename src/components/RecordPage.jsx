@@ -103,7 +103,7 @@ export default function RecordPage({ title, tableName, columns }) {
 
       <div className="table-container" id={`print-region-${tableName}`}>
         <div className="print-header" style={{ display: 'none' }}>
-          <h2>🐷 PigFarm Management — {title}</h2>
+          <h2>🐾 Animal Farm Management — {title}</h2>
           <p>Generated: {new Date().toLocaleDateString()}</p>
         </div>
         {isLoading ? (

@@ -147,7 +147,7 @@ const Shell = ({ children, title, subtitle }) => (
           <PigIcon />
         </div>
         <h1 style={{ fontSize: '1.5rem', marginBottom: '0.25rem', letterSpacing: '-0.02em' }}>
-          Pig Farm Manager
+          Animal Farm Management Portal
         </h1>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.875rem' }}>
           {subtitle || 'Manage your farm with ease'}
@@ -165,7 +165,7 @@ const Shell = ({ children, title, subtitle }) => (
       </div>
 
       <p style={{ textAlign: 'center', marginTop: '1.5rem', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-        © {new Date().getFullYear()} Pig Farm Manager · Secure & Private
+        © {new Date().getFullYear()} Animal Farm Management Portal · Secure & Private
       </p>
     </div>
   </div>
@@ -422,7 +422,7 @@ export default function LoginPage({ onAuthenticated }) {
   // ── SIGN UP VIEW ─────────────────────────────────────────────────────────────
   if (view === VIEW.SIGN_UP) {
     return (
-      <Shell title="Create Account" subtitle="Start managing your pig farm today">
+      <Shell title="Create Account" subtitle="Start managing your animal farm today">
         <Alert type={alert.type} message={alert.message} />
         <form onSubmit={handleSignUp}>
           <InputField
