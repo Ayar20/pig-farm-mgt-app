@@ -26,7 +26,8 @@ app.get('/api/:table', async (req, res) => {
     'breeding_records',
     'health_records',
     'feed_inventory',
-    'weight_records'
+    'weight_records',
+    'expense_records'
   ];
   
   const { table } = req.params;
@@ -57,7 +58,8 @@ app.post('/api/:table', async (req, res) => {
     'breeding_records',
     'health_records',
     'feed_inventory',
-    'weight_records'
+    'weight_records',
+    'expense_records'
   ];
   
   const { table } = req.params;
@@ -240,6 +242,100 @@ app.get('/api/analytics/adg', async (req, res) => {
     res.status(500).json({ error: 'Database error' });
   }
 });
+
+// ── Analytics: Financial & Profitability ──────────────────────────────────────
+// GET /api/analytics/profitability?batch=BATCH_ID
+app.get('/api/analytics/profitability', async (req, res) => {
+  const { batch } = req.query;
+  if (!batch) {
+    return res.status(400).json({ error: 'batch query parameter is required' });
+  }
+
+  try {
+    // 1. Sum feed cost from feeding_records
+    const feedCostResult = await sql.query(
+      `SELECT COALESCE(SUM(CAST(cost AS NUMERIC)), 0) AS total_feed_cost FROM feeding_records WHERE batch = $1`,
+      [batch]
+    );
+    const feedCost = parseFloat(feedCostResult[0].total_feed_cost);
+
+    // 2. Sum other costs from expense_records
+    const otherCostResult = await sql.query(
+      `SELECT COALESCE(SUM(amount), 0) AS total_other_cost FROM expense_records WHERE batch = $1`,
+      [batch]
+    );
+    const otherCost = parseFloat(otherCostResult[0].total_other_cost);
+
+    // 3. Sum revenue from sales_records
+    const revenueResult = await sql.query(
+      `SELECT COALESCE(SUM(CAST(total AS NUMERIC)), 0) AS total_revenue FROM sales_records WHERE batch = $1`,
+      [batch]
+    );
+    const revenue = parseFloat(revenueResult[0].total_revenue);
+
+    // 4. Calculate total costs and profit
+    const totalCost = feedCost + otherCost;
+    const netProfit = revenue - totalCost;
+
+    // 5. Weight gained (from weight_records)
+    const weightResult = await sql.query(
+      `SELECT COALESCE(MAX(weight_kg), 0) AS max_weight, COALESCE(MIN(weight_kg), 0) AS min_weight FROM weight_records WHERE batch = $1`,
+      [batch]
+    );
+    const weightGained = parseFloat(weightResult[0].max_weight) - parseFloat(weightResult[0].min_weight);
+
+    // 6. Cost of Production (CoP) per kg
+    const copPerKg = weightGained > 0 ? (totalCost / weightGained).toFixed(2) : null;
+
+    // 7. Get category breakdown from expense_records for this batch
+    const breakdownResult = await sql.query(
+      `SELECT category, COALESCE(SUM(amount), 0) AS total_amount FROM expense_records WHERE batch = $1 GROUP BY category`,
+      [batch]
+    );
+
+    // Combine feed cost into breakdown
+    const breakdown = [
+      { category: 'Feed', amount: feedCost },
+      ...breakdownResult.map(row => ({
+        category: row.category,
+        amount: parseFloat(row.total_amount)
+      }))
+    ];
+
+    // 8. Fetch detailed transaction log (expenses + sales) for this batch
+    const expensesList = await sql.query(
+      `SELECT 'Expense' AS type, date, category AS label, amount, description FROM expense_records WHERE batch = $1`,
+      [batch]
+    );
+    const salesList = await sql.query(
+      `SELECT 'Sale' AS type, date, customer AS label, CAST(total AS NUMERIC) AS amount, invoice AS description FROM sales_records WHERE batch = $1`,
+      [batch]
+    );
+    
+    // Sort transactions by date descending
+    const transactions = [
+      ...expensesList.map(e => ({ ...e, amount: parseFloat(e.amount), date: e.date.toString() })),
+      ...salesList.map(s => ({ ...s, amount: parseFloat(s.amount), date: s.date.toString() }))
+    ].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    res.json({
+      batch,
+      feed_cost: feedCost,
+      other_cost: otherCost,
+      total_cost: totalCost,
+      revenue,
+      net_profit: netProfit,
+      weight_gained_kg: weightGained,
+      cop_per_kg: copPerKg !== null ? parseFloat(copPerKg) : 'Insufficient weight data',
+      breakdown,
+      transactions
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 
 // For local testing
 if (process.env.NODE_ENV !== 'production') {

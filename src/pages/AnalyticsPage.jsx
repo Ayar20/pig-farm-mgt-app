@@ -1,11 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Scale, Warehouse, TrendingUp, Calendar, Info, RefreshCw } from 'lucide-react';
+import { Scale, Warehouse, TrendingUp, Calendar, Info, RefreshCw, DollarSign, PiggyBank, ReceiptText, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 
 export default function AnalyticsPage() {
   const [batches, setBatches] = useState([]);
   const [selectedBatch, setSelectedBatch] = useState('');
+  const [activeTab, setActiveTab] = useState('growth'); // 'growth' or 'finance'
+  
+  // Growth State
   const [fcrData, setFcrData] = useState(null);
   const [adgData, setAdgData] = useState(null);
+  
+  // Finance State
+  const [profitabilityData, setProfitabilityData] = useState(null);
+  
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [hoveredPoint, setHoveredPoint] = useState(null);
@@ -47,18 +54,21 @@ export default function AnalyticsPage() {
       setLoading(true);
       setError('');
       try {
-        const [fcrRes, adgRes] = await Promise.all([
+        const [fcrRes, adgRes, profitRes] = await Promise.all([
           fetch(`/api/analytics/fcr?batch=${encodeURIComponent(selectedBatch)}`),
-          fetch(`/api/analytics/adg?batch=${encodeURIComponent(selectedBatch)}`)
+          fetch(`/api/analytics/adg?batch=${encodeURIComponent(selectedBatch)}`),
+          fetch(`/api/analytics/profitability?batch=${encodeURIComponent(selectedBatch)}`)
         ]);
         const fcr = await fcrRes.json();
         const adg = await adgRes.json();
+        const profit = await profitRes.json();
 
-        if (fcr.error || adg.error) {
-          setError(fcr.error || adg.error || 'Failed to calculate analytics');
+        if (fcr.error || adg.error || profit.error) {
+          setError(fcr.error || adg.error || profit.error || 'Failed to calculate analytics');
         } else {
           setFcrData(fcr);
           setAdgData(adg);
+          setProfitabilityData(profit);
         }
       } catch (err) {
         console.error('Error loading analytics:', err);
@@ -85,7 +95,7 @@ export default function AnalyticsPage() {
     }
   };
 
-  // Render Custom SVG Growth Chart
+  // Render Custom SVG Growth Chart (from Phase 4)
   const renderGrowthChart = () => {
     if (!adgData || !adgData.history || adgData.history.length < 2) {
       return (
@@ -101,10 +111,7 @@ export default function AnalyticsPage() {
       );
     }
 
-    // Process and sort history by date
     const history = [...adgData.history].sort((a, b) => new Date(a.date) - new Date(b.date));
-
-    // Dimension config
     const width = 600;
     const height = 280;
     const paddingX = 60;
@@ -118,32 +125,20 @@ export default function AnalyticsPage() {
     const minDate = dates[0];
     const maxDate = dates[dates.length - 1];
 
-    const timeSpan = maxDate - minDate || 1; // prevent divide by zero
+    const timeSpan = maxDate - minDate || 1;
     const weightSpan = maxWeight - minWeight || 1;
 
-    // Project points into SVG viewport
     const points = history.map((item, index) => {
       const date = new Date(item.date);
       const weight = parseFloat(item.weight_kg);
-      
       const x = paddingX + ((date - minDate) / timeSpan) * (width - 2 * paddingX);
       const y = height - paddingY - ((weight - minWeight) / weightSpan) * (height - 2 * paddingY);
-
       return { x, y, weight, date, stage: item.weighing_stage, original: item };
     });
 
-    // Create SVG Path
     const linePath = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x} ${p.y}`).join(' ');
-    
-    // Create fill path for Area Under Curve gradient
-    const areaPath = `
-      ${linePath} 
-      L ${points[points.length - 1].x} ${height - paddingY} 
-      L ${points[0].x} ${height - paddingY} 
-      Z
-    `;
+    const areaPath = `${linePath} L ${points[points.length - 1].x} ${height - paddingY} L ${points[0].x} ${height - paddingY} Z`;
 
-    // Horizontal gridlines (y axis divisions)
     const gridDivisions = 4;
     const gridY = Array.from({ length: gridDivisions + 1 }).map((_, i) => {
       const val = minWeight + (weightSpan / gridDivisions) * i;
@@ -161,69 +156,26 @@ export default function AnalyticsPage() {
             </linearGradient>
           </defs>
 
-          {/* Grid lines & Y Axis Labels */}
           {gridY.map((g, i) => (
             <g key={i}>
-              <line 
-                x1={paddingX} 
-                y1={g.y} 
-                x2={width - paddingX} 
-                y2={g.y} 
-                stroke="var(--border)" 
-                strokeWidth="1" 
-                strokeDasharray="4,4" 
-              />
-              <text 
-                x={paddingX - 10} 
-                y={g.y + 4} 
-                textAnchor="end" 
-                fill="var(--text-secondary)" 
-                fontSize="11" 
-                fontFamily="inherit"
-              >
-                {g.label}
-              </text>
+              <line x1={paddingX} y1={g.y} x2={width - paddingX} y2={g.y} stroke="var(--border)" strokeWidth="1" strokeDasharray="4,4" />
+              <text x={paddingX - 10} y={g.y + 4} textAnchor="end" fill="var(--text-secondary)" fontSize="11" fontFamily="inherit">{g.label}</text>
             </g>
           ))}
 
-          {/* X Axis Date Labels */}
           {points.length > 0 && [points[0], points[points.length - 1]].map((p, i) => (
-            <text 
-              key={i}
-              x={p.x} 
-              y={height - paddingY + 20} 
-              textAnchor={i === 0 ? 'start' : 'end'} 
-              fill="var(--text-secondary)" 
-              fontSize="11" 
-              fontFamily="inherit"
-            >
+            <text key={i} x={p.x} y={height - paddingY + 20} textAnchor={i === 0 ? 'start' : 'end'} fill="var(--text-secondary)" fontSize="11" fontFamily="inherit">
               {p.date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
             </text>
           ))}
 
-          {/* Area Under Curve Fill */}
           <path d={areaPath} fill="url(#growthGradient)" />
+          <path d={linePath} fill="none" stroke="var(--primary)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
 
-          {/* Line Chart */}
-          <path 
-            d={linePath} 
-            fill="none" 
-            stroke="var(--primary)" 
-            strokeWidth="3" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-          />
-
-          {/* Data Points */}
           {points.map((p, i) => (
             <circle 
-              key={i}
-              cx={p.x} 
-              cy={p.y} 
-              r={hoveredPoint && hoveredPoint.index === i ? 6 : 4} 
-              fill="var(--surface)" 
-              stroke="var(--primary)" 
-              strokeWidth="2" 
+              key={i} cx={p.x} cy={p.y} r={hoveredPoint && hoveredPoint.index === i ? 6 : 4} 
+              fill="var(--surface)" stroke="var(--primary)" strokeWidth="2" 
               style={{ cursor: 'pointer', transition: 'r 0.1s ease' }}
               onMouseEnter={() => setHoveredPoint({ ...p, index: i })}
               onMouseLeave={() => setHoveredPoint(null)}
@@ -231,26 +183,13 @@ export default function AnalyticsPage() {
           ))}
         </svg>
 
-        {/* Hover Tooltip overlay */}
         {hoveredPoint && (
           <div style={{
-            position: 'absolute',
-            left: `${(hoveredPoint.x / width) * 100}%`,
-            top: `${(hoveredPoint.y / height) * 100 - 65}%`,
-            transform: 'translateX(-50%)',
-            backgroundColor: 'var(--surface)',
-            color: 'var(--text-primary)',
-            padding: '0.5rem 0.75rem',
-            borderRadius: 'var(--radius-md)',
-            boxShadow: 'var(--shadow-lg)',
-            border: '1px solid var(--border)',
-            pointerEvents: 'none',
-            fontSize: '0.75rem',
-            whiteSpace: 'nowrap',
-            zIndex: 10,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '0.125rem'
+            position: 'absolute', left: `${(hoveredPoint.x / width) * 100}%`, top: `${(hoveredPoint.y / height) * 100 - 65}%`,
+            transform: 'translateX(-50%)', backgroundColor: 'var(--surface)', color: 'var(--text-primary)',
+            padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-lg)',
+            border: '1px solid var(--border)', pointerEvents: 'none', fontSize: '0.75rem', whiteSpace: 'nowrap', zIndex: 10,
+            display: 'flex', flexDirection: 'column', gap: '0.125rem'
           }}>
             <div style={{ fontWeight: '600' }}>Weight: {hoveredPoint.weight} kg</div>
             <div style={{ color: 'var(--text-muted)' }}>Date: {hoveredPoint.date.toLocaleDateString()}</div>
@@ -263,14 +202,15 @@ export default function AnalyticsPage() {
 
   return (
     <div className="animate-fade-in">
-      <div className="page-header" style={{ marginBottom: '1.5rem' }}>
+      {/* Page Header with Batch Selector */}
+      <div className="page-header" style={{ marginBottom: '1.5rem', display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
-          <h1>Performance Analytics</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>FCR & Growth rate tracking by cohort batch</p>
+          <h1>Farm Cohort Analytics</h1>
+          <p style={{ color: 'var(--text-secondary)' }}>Performance and financial metrics by cohort batch</p>
         </div>
         
         {batches.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
             <label htmlFor="batch-select" style={{ margin: 0, whiteSpace: 'nowrap', fontWeight: '600' }}>Active Batch:</label>
             <select
               id="batch-select"
@@ -291,132 +231,304 @@ export default function AnalyticsPage() {
           <TrendingUp size={48} style={{ color: 'var(--text-muted)', marginBottom: '1rem', opacity: 0.5 }} />
           <h2>No Cohorts Available</h2>
           <p style={{ maxWidth: '450px', margin: '0 auto' }}>
-            To calculate Feed Conversion Ratios (FCR) and Average Daily Gain (ADG), please log feeding activities and weights associated with batch IDs in the Feed Stock and Weights tables.
+            To calculate Feed Conversion Ratios (FCR), growth metrics (ADG), and financial profitability, please record feeding logs, weights, and sales with batch IDs.
           </p>
         </div>
       ) : error ? (
         <div className="card" style={{ borderColor: 'rgba(239, 68, 68, 0.3)', padding: '2rem', textAlign: 'center' }}>
           <p style={{ color: 'var(--danger)', fontWeight: '600' }}>{error}</p>
-          <button 
-            className="btn btn-outline" 
-            style={{ marginTop: '1rem' }} 
-            onClick={() => setSelectedBatch(selectedBatch)}
-          >
+          <button className="btn btn-outline" style={{ marginTop: '1rem' }} onClick={() => setSelectedBatch(selectedBatch)}>
             <RefreshCw size={16} /> Retry calculation
           </button>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {/* Main Stat Summary Cards */}
-          <div className="dashboard-grid">
-            {/* Feed Conversion Ratio Card */}
-            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                  <div className="stat-icon" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: 'var(--warning)' }}>
+        <div>
+          {/* Tab Switcher */}
+          <div style={{
+            display: 'flex', borderBottom: '1px solid var(--border)', marginBottom: '1.5rem', gap: '1.5rem'
+          }}>
+            <button
+              onClick={() => setActiveTab('growth')}
+              style={{
+                background: 'none', border: 'none', borderBottom: activeTab === 'growth' ? '2px solid var(--primary)' : '2px solid transparent',
+                padding: '0.75rem 0.5rem', color: activeTab === 'growth' ? 'var(--primary)' : 'var(--text-secondary)',
+                fontWeight: activeTab === 'growth' ? '600' : '400', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                transition: 'var(--transition)'
+              }}
+            >
+              <Scale size={16} />
+              Growth & FCR
+            </button>
+            <button
+              onClick={() => setActiveTab('finance')}
+              style={{
+                background: 'none', border: 'none', borderBottom: activeTab === 'finance' ? '2px solid var(--primary)' : '2px solid transparent',
+                padding: '0.75rem 0.5rem', color: activeTab === 'finance' ? 'var(--primary)' : 'var(--text-secondary)',
+                fontWeight: activeTab === 'finance' ? '600' : '400', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                transition: 'var(--transition)'
+              }}
+            >
+              <DollarSign size={16} />
+              Finance & Profitability
+            </button>
+          </div>
+
+          {/* Loading Indicator */}
+          {loading ? (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '240px' }}>
+              <div className="spinner" style={{ borderColor: 'var(--primary)', borderTopColor: 'transparent', width: '28px', height: '28px' }}></div>
+            </div>
+          ) : activeTab === 'growth' ? (
+            /* TAB 1: GROWTH & FCR VIEW */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div className="dashboard-grid">
+                {/* FCR Card */}
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                      <div className="stat-icon" style={{ backgroundColor: 'rgba(245, 158, 11, 0.1)', color: 'var(--warning)' }}>
+                        <Warehouse size={20} />
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-secondary)' }}>FCR</h3>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Feed Conversion Ratio</p>
+                      </div>
+                    </div>
+                    {fcrData && (
+                      <span className="badge" style={getBadgeStyle(fcrData.fcr_interpretation)}>
+                        {fcrData.fcr_interpretation}
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', margin: '0.5rem 0' }}>
+                    <span style={{ fontSize: '2.5rem', fontWeight: '800', letterSpacing: '-0.05em' }}>
+                      {fcrData ? fcrData.fcr : 'N/A'}
+                    </span>
+                    {fcrData && typeof fcrData.fcr === 'number' && (
+                      <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>kg feed/kg gain</span>
+                    )}
+                  </div>
+
+                  {fcrData && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem', fontSize: '0.875rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Total Feed Consumed:</span>
+                        <span style={{ fontWeight: '600' }}>{fcrData.total_feed_kg} kg</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Total Weight Gained:</span>
+                        <span style={{ fontWeight: '600' }}>{fcrData.weight_gained_kg} kg</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ADG Card */}
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+                      <div className="stat-icon" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}>
+                        <Scale size={20} />
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-secondary)' }}>ADG</h3>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Average Daily Gain</p>
+                      </div>
+                    </div>
+                    {adgData && (
+                      <span className="badge" style={getBadgeStyle(adgData.adg_interpretation)}>
+                        {adgData.adg_interpretation}
+                      </span>
+                    )}
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', margin: '0.5rem 0' }}>
+                    <span style={{ fontSize: '2.5rem', fontWeight: '800', letterSpacing: '-0.05em' }}>
+                      {adgData && typeof adgData.adg === 'number' ? adgData.adg.toFixed(2) : 'N/A'}
+                    </span>
+                    {adgData && typeof adgData.adg === 'number' && (
+                      <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>kg / day</span>
+                    )}
+                  </div>
+
+                  {adgData && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem', fontSize: '0.875rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Weight Growth Span:</span>
+                        <span style={{ fontWeight: '600' }}>{adgData.start_weight_kg} kg → {adgData.end_weight_kg} kg</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Days Elapsed:</span>
+                        <span style={{ fontWeight: '600' }}>{adgData.days_elapsed} days</span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Growth Curve Chart */}
+              <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '600' }}>Weight Growth Trajectory</h3>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Weight gain curve over historical check-ins</p>
+                </div>
+                <div style={{ marginTop: '1rem', width: '100%' }}>
+                  {renderGrowthChart()}
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* TAB 2: FINANCE & PROFITABILITY VIEW */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div className="dashboard-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))' }}>
+                
+                {/* Revenue Card */}
+                <div className="card stat-card" style={{ gap: '1rem' }}>
+                  <div className="stat-icon" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}>
+                    <TrendingUp size={20} />
+                  </div>
+                  <div>
+                    <div className="stat-value" style={{ color: 'var(--success)' }}>
+                      ${profitabilityData ? profitabilityData.revenue.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                    </div>
+                    <div className="stat-label">Total Revenue</div>
+                  </div>
+                </div>
+
+                {/* Total Cost Card */}
+                <div className="card stat-card" style={{ gap: '1rem' }}>
+                  <div className="stat-icon" style={{ backgroundColor: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)' }}>
                     <Warehouse size={20} />
                   </div>
                   <div>
-                    <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-secondary)' }}>FCR</h3>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Feed Conversion Ratio</p>
+                    <div className="stat-value" style={{ color: 'var(--danger)' }}>
+                      ${profitabilityData ? profitabilityData.total_cost.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                    </div>
+                    <div className="stat-label">Total Cost</div>
                   </div>
                 </div>
-                {fcrData && (
-                  <span className="badge" style={getBadgeStyle(fcrData.fcr_interpretation)}>
-                    {fcrData.fcr_interpretation}
-                  </span>
-                )}
-              </div>
 
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', margin: '0.5rem 0' }}>
-                <span style={{ fontSize: '2.5rem', fontWeight: '800', letterSpacing: '-0.05em' }}>
-                  {loading ? '...' : (fcrData ? fcrData.fcr : 'N/A')}
-                </span>
-                {fcrData && typeof fcrData.fcr === 'number' && (
-                  <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>kg feed/kg gain</span>
-                )}
-              </div>
-
-              {fcrData && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem', fontSize: '0.875rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Total Feed Consumed:</span>
-                    <span style={{ fontWeight: '600' }}>{fcrData.total_feed_kg} kg</span>
+                {/* Profit/Loss Card */}
+                <div className="card stat-card" style={{ gap: '1rem' }}>
+                  <div 
+                    className="stat-icon" 
+                    style={{ 
+                      backgroundColor: profitabilityData && profitabilityData.net_profit >= 0 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)', 
+                      color: profitabilityData && profitabilityData.net_profit >= 0 ? 'var(--success)' : 'var(--danger)' 
+                    }}
+                  >
+                    <PiggyBank size={20} />
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Total Weight Gained:</span>
-                    <span style={{ fontWeight: '600' }}>{fcrData.weight_gained_kg} kg</span>
+                  <div>
+                    <div 
+                      className="stat-value"
+                      style={{ color: profitabilityData && profitabilityData.net_profit >= 0 ? 'var(--success)' : 'var(--danger)' }}
+                    >
+                      ${profitabilityData ? profitabilityData.net_profit.toLocaleString(undefined, { minimumFractionDigits: 2 }) : '0.00'}
+                    </div>
+                    <div className="stat-label">Net Profit / Loss</div>
                   </div>
                 </div>
-              )}
-            </div>
 
-            {/* Average Daily Gain Card */}
-            <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-                  <div className="stat-icon" style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)' }}>
+                {/* CoP per kg Card */}
+                <div className="card stat-card" style={{ gap: '1rem' }}>
+                  <div className="stat-icon" style={{ backgroundColor: 'rgba(79, 70, 229, 0.1)', color: 'var(--primary)' }}>
                     <Scale size={20} />
                   </div>
                   <div>
-                    <h3 style={{ fontSize: '1rem', fontWeight: '600', color: 'var(--text-secondary)' }}>ADG</h3>
-                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Average Daily Gain</p>
+                    <div className="stat-value">
+                      {profitabilityData && typeof profitabilityData.cop_per_kg === 'number' ? `$${profitabilityData.cop_per_kg.toFixed(2)}` : 'N/A'}
+                    </div>
+                    <div className="stat-label">Cost of Production (COP/kg)</div>
                   </div>
                 </div>
-                {adgData && (
-                  <span className="badge" style={getBadgeStyle(adgData.adg_interpretation)}>
-                    {adgData.adg_interpretation}
-                  </span>
-                )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.25rem', margin: '0.5rem 0' }}>
-                <span style={{ fontSize: '2.5rem', fontWeight: '800', letterSpacing: '-0.05em' }}>
-                  {loading ? '...' : (adgData && typeof adgData.adg === 'number' ? adgData.adg.toFixed(2) : 'N/A')}
-                </span>
-                {adgData && typeof adgData.adg === 'number' && (
-                  <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>kg / day</span>
-                )}
-              </div>
-
-              {adgData && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', borderTop: '1px solid var(--border)', paddingTop: '0.75rem', fontSize: '0.875rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Weight Growth Span:</span>
-                    <span style={{ fontWeight: '600' }}>{adgData.start_weight_kg} kg → {adgData.end_weight_kg} kg</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Days Elapsed:</span>
-                    <span style={{ fontWeight: '600' }}>{adgData.days_elapsed} days</span>
+              {/* Cost Breakdown & Transaction Logs */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                
+                {/* Cost Category breakdown card */}
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <h3>Cost Category Breakdown</h3>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Proportional distribution of batch expenses</p>
+                  
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+                    {profitabilityData && profitabilityData.breakdown && profitabilityData.breakdown.length > 0 ? (
+                      (() => {
+                        const totalExpenses = profitabilityData.breakdown.reduce((sum, item) => sum + item.amount, 0);
+                        return profitabilityData.breakdown.map((item, idx) => {
+                          const pct = totalExpenses > 0 ? ((item.amount / totalExpenses) * 100).toFixed(1) : '0.0';
+                          return (
+                            <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.875rem' }}>
+                                <span style={{ fontWeight: '500' }}>{item.category}</span>
+                                <span style={{ color: 'var(--text-secondary)' }}>${item.amount.toLocaleString()} ({pct}%)</span>
+                              </div>
+                              <div style={{ width: '100%', height: '8px', backgroundColor: 'var(--surface-hover)', borderRadius: 'var(--radius-full)', overflow: 'hidden' }}>
+                                <div style={{
+                                  width: `${pct}%`, height: '100%',
+                                  backgroundColor: item.category === 'Feed' ? 'var(--warning)' : 'var(--primary)',
+                                  borderRadius: 'var(--radius-full)'
+                                }}></div>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()
+                    ) : (
+                      <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>No expenses logged for this batch</p>
+                    )}
                   </div>
                 </div>
-              )}
-            </div>
-          </div>
 
-          {/* Growth Curve Chart Card */}
-          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '600' }}>Weight Growth Trajectory</h3>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Weight gain curve over historical check-ins</p>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                <Calendar size={14} />
-                <span>Timeline View</span>
-              </div>
-            </div>
+                {/* Batch Transactions Ledger Card */}
+                <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <h3>Batch Ledger</h3>
+                  <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Detailed ledger of sales revenue and expenses</p>
 
-            <div style={{ marginTop: '1rem', width: '100%' }}>
-              {loading ? (
-                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '240px' }}>
-                  <div className="spinner" style={{ borderColor: 'var(--primary)', borderTopColor: 'transparent', width: '28px', height: '28px' }}></div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginTop: '1rem', maxHeight: '300px', overflowY: 'auto', paddingRight: '0.25rem' }}>
+                    {profitabilityData && profitabilityData.transactions && profitabilityData.transactions.length > 0 ? (
+                      profitabilityData.transactions.map((tx, idx) => (
+                        <div 
+                          key={idx} 
+                          style={{ 
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center', 
+                            padding: '0.75rem', backgroundColor: 'var(--background)', borderRadius: 'var(--radius-md)',
+                            border: '1px solid var(--border)'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <div style={{
+                              width: '28px', height: '28px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                              backgroundColor: tx.type === 'Sale' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                              color: tx.type === 'Sale' ? 'var(--success)' : 'var(--danger)'
+                            }}>
+                              {tx.type === 'Sale' ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
+                            </div>
+                            <div>
+                              <div style={{ fontWeight: '500', fontSize: '0.875rem' }}>{tx.label}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                {tx.type === 'Sale' ? `Sale (Invoice: ${tx.description})` : `Expense (${tx.description})`}
+                              </div>
+                            </div>
+                          </div>
+                          <div style={{ 
+                            fontWeight: '600', fontSize: '0.875rem',
+                            color: tx.type === 'Sale' ? 'var(--success)' : 'var(--danger)'
+                          }}>
+                            {tx.type === 'Sale' ? '+' : '-'}${tx.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', textAlign: 'center', padding: '2rem' }}>No transaction history found</p>
+                    )}
+                  </div>
                 </div>
-              ) : (
-                renderGrowthChart()
-              )}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       )}
     </div>

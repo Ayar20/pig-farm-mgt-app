@@ -120,8 +120,22 @@ function App() {
                 { header: 'Date', accessor: 'date' },
                 { header: 'Invoice #', accessor: 'invoice' },
                 { header: 'Customer', accessor: 'customer' },
+                { header: 'Batch ID', accessor: 'batch' },
                 { header: 'Qty', accessor: 'qty' },
                 { header: 'Total Value', accessor: 'total' }
+              ]}
+            />
+          } />
+          <Route path="expenses" element={
+            <RecordPage 
+              title="Expense Records" 
+              tableName="expense_records"
+              columns={[
+                { header: 'Date', accessor: 'date' },
+                { header: 'Category', accessor: 'category' },
+                { header: 'Amount ($)', accessor: 'amount' },
+                { header: 'Batch ID', accessor: 'batch' },
+                { header: 'Description', accessor: 'description' }
               ]}
             />
           } />

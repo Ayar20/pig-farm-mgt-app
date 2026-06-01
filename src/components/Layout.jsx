@@ -14,7 +14,8 @@ import {
   HeartPulse,
   Warehouse,
   Scale,
-  LineChart
+  LineChart,
+  Coins
 } from 'lucide-react';
 
 const NavItems = [
@@ -29,6 +30,7 @@ const NavItems = [
   { path: '/management', label: 'Management', icon: <ClipboardList size={20} /> },
   { path: '/feeding', label: 'Feeding', icon: <Utensils size={20} /> },
   { path: '/sales', label: 'Sales', icon: <TrendingUp size={20} /> },
+  { path: '/expenses', label: 'Expenses', icon: <Coins size={20} /> },
   { path: '/production-output', label: 'Output', icon: <PackageOpen size={20} /> },
   { path: '/production-inout', label: 'In/Out', icon: <ArrowRightLeft size={20} /> },
   { path: '/staff', label: 'Staff', icon: <Users size={20} /> },
