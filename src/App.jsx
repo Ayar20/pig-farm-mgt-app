@@ -6,6 +6,7 @@ import RecordPage from './components/RecordPage';
 import LoginPage from './pages/LoginPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import { authClient } from './auth';
+import { syncOfflineQueue } from './utils/api';
 
 function App() {
   const [session, setSession] = useState(null);
@@ -26,6 +27,10 @@ function App() {
       .finally(() => {
         setLoading(false);
       });
+  }, []);
+
+  useEffect(() => {
+    syncOfflineQueue().catch(err => console.error('Initial offline sync failed:', err));
   }, []);
 
   const handleAuthenticated = (newSession, newUser) => {

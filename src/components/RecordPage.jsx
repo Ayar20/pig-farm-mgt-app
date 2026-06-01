@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter } from 'lucide-react';
+import { Plus, Search, Filter, CloudOff } from 'lucide-react';
+import { apiFetch, apiPost } from '../utils/api';
 
 export default function RecordPage({ title, tableName, columns }) {
   const [data, setData] = useState([]);
@@ -10,8 +11,7 @@ export default function RecordPage({ title, tableName, columns }) {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/${tableName}`);
-      const result = await response.json();
+      const result = await apiFetch(`/api/${tableName}`);
       if (Array.isArray(result)) {
         setData(result);
       }
@@ -23,6 +23,14 @@ export default function RecordPage({ title, tableName, columns }) {
 
   useEffect(() => {
     fetchData();
+    
+    const handleSyncCompleted = () => {
+      fetchData();
+    };
+    window.addEventListener('sync-completed', handleSyncCompleted);
+    return () => {
+      window.removeEventListener('sync-completed', handleSyncCompleted);
+    };
   }, [tableName]);
 
   const handleSubmit = async (e) => {
@@ -34,17 +42,11 @@ export default function RecordPage({ title, tableName, columns }) {
     });
 
     try {
-      const response = await fetch(`/api/${tableName}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(newRecord)
-      });
+      const response = await apiPost(`/api/${tableName}`, newRecord);
       
-      if (response.ok) {
+      if (response.success) {
         setIsModalOpen(false);
-        fetchData(); // refresh data
+        fetchData();
       } else {
         alert('Failed to add record');
       }
@@ -105,17 +107,40 @@ export default function RecordPage({ title, tableName, columns }) {
             <tbody>
               {filteredData.length > 0 ? (
                 filteredData.map((row, i) => (
-                  <tr key={row.id || i}>
+                  <tr key={row.id || i} style={{ opacity: row._offline ? 0.7 : 1 }}>
                     {columns.map((col, j) => (
-                      <td key={j}>{
-                        // Format date nicely if it looks like a date string
-                        col.accessor === 'date' && row[col.accessor] 
-                          ? new Date(row[col.accessor]).toLocaleDateString() 
-                          : row[col.accessor]
-                      }</td>
+                      <td key={j}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span>{
+                            col.accessor === 'date' && row[col.accessor] 
+                              ? new Date(row[col.accessor]).toLocaleDateString() 
+                              : row[col.accessor]
+                          }</span>
+                          {j === 0 && row._offline && (
+                            <span 
+                              className="badge badge-warning" 
+                              style={{ 
+                                fontSize: '0.65rem', 
+                                display: 'inline-flex', 
+                                alignItems: 'center', 
+                                gap: '0.25rem',
+                                padding: '0.125rem 0.375rem' 
+                              }}
+                            >
+                              <CloudOff size={10} /> Pending Sync
+                            </span>
+                          )}
+                        </div>
+                      </td>
                     ))}
                     <td>
-                      <button className="btn btn-outline" style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}>Edit</button>
+                      <button 
+                        className="btn btn-outline" 
+                        style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}
+                        disabled={row._offline}
+                      >
+                        Edit
+                      </button>
                     </td>
                   </tr>
                 ))

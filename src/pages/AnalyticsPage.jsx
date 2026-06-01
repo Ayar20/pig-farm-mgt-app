@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Scale, Warehouse, TrendingUp, Calendar, Info, RefreshCw, DollarSign, PiggyBank, ReceiptText, ArrowDownRight, ArrowUpRight } from 'lucide-react';
+import { apiFetch } from '../utils/api';
 
 export default function AnalyticsPage() {
   const [batches, setBatches] = useState([]);
@@ -21,12 +22,10 @@ export default function AnalyticsPage() {
   useEffect(() => {
     async function fetchBatches() {
       try {
-        const [weightsRes, feedingRes] = await Promise.all([
-          fetch('/api/weight_records'),
-          fetch('/api/feeding_records')
+        const [weights, feeding] = await Promise.all([
+          apiFetch('/api/weight_records'),
+          apiFetch('/api/feeding_records')
         ]);
-        const weights = await weightsRes.json();
-        const feeding = await feedingRes.json();
         
         // Extract unique batch IDs
         const batchSet = new Set();
@@ -54,14 +53,11 @@ export default function AnalyticsPage() {
       setLoading(true);
       setError('');
       try {
-        const [fcrRes, adgRes, profitRes] = await Promise.all([
-          fetch(`/api/analytics/fcr?batch=${encodeURIComponent(selectedBatch)}`),
-          fetch(`/api/analytics/adg?batch=${encodeURIComponent(selectedBatch)}`),
-          fetch(`/api/analytics/profitability?batch=${encodeURIComponent(selectedBatch)}`)
+        const [fcr, adg, profit] = await Promise.all([
+          apiFetch(`/api/analytics/fcr?batch=${encodeURIComponent(selectedBatch)}`),
+          apiFetch(`/api/analytics/adg?batch=${encodeURIComponent(selectedBatch)}`),
+          apiFetch(`/api/analytics/profitability?batch=${encodeURIComponent(selectedBatch)}`)
         ]);
-        const fcr = await fcrRes.json();
-        const adg = await adgRes.json();
-        const profit = await profitRes.json();
 
         if (fcr.error || adg.error || profit.error) {
           setError(fcr.error || adg.error || profit.error || 'Failed to calculate analytics');
