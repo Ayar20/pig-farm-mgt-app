@@ -9,8 +9,88 @@ app.use(cors());
 app.use(express.json());
 
 // Initialize neon connection
-// This reads from process.env.DATABASE_URL by default
 const sql = neon(process.env.DATABASE_URL);
+
+// ── Bootstrap tables on startup ────────────────────────────────────────────────
+(async () => {
+  try {
+    await sql.query(`
+      CREATE TABLE IF NOT EXISTS user_roles (
+        id SERIAL PRIMARY KEY,
+        email TEXT UNIQUE NOT NULL,
+        role TEXT NOT NULL DEFAULT 'worker',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await sql.query(`
+      CREATE TABLE IF NOT EXISTS push_subscriptions (
+        id SERIAL PRIMARY KEY,
+        email TEXT NOT NULL,
+        subscription JSONB NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    console.log('Bootstrap tables ensured.');
+  } catch (err) {
+    console.error('Bootstrap error:', err.message);
+  }
+})();
+
+// ── Role middleware ────────────────────────────────────────────────────────────
+async function getUserRole(email) {
+  if (!email) return 'worker';
+  try {
+    const rows = await sql.query(`SELECT role FROM user_roles WHERE email = $1`, [email]);
+    return rows.length > 0 ? rows[0].role : 'worker';
+  } catch { return 'worker'; }
+}
+
+// ── User Roles endpoints ───────────────────────────────────────────────────────
+// GET  /api/user-roles          — list all (admin only)
+// POST /api/user-roles          — upsert role for email
+// DELETE /api/user-roles/:email — remove role entry
+app.get('/api/user-roles', async (req, res) => {
+  try {
+    const rows = await sql.query(`SELECT email, role FROM user_roles ORDER BY created_at DESC`);
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/user-roles', async (req, res) => {
+  const { email, role } = req.body;
+  if (!email || !role) return res.status(400).json({ error: 'email and role required' });
+  const validRoles = ['admin', 'manager', 'worker'];
+  if (!validRoles.includes(role)) return res.status(400).json({ error: 'Invalid role' });
+  try {
+    const rows = await sql.query(
+      `INSERT INTO user_roles (email, role) VALUES ($1, $2)
+       ON CONFLICT (email) DO UPDATE SET role = EXCLUDED.role
+       RETURNING *`,
+      [email, role]
+    );
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/user-roles/:email', async (req, res) => {
+  try {
+    await sql.query(`DELETE FROM user_roles WHERE email = $1`, [decodeURIComponent(req.params.email)]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/my-role?email=... — used by the frontend RoleContext
+app.get('/api/my-role', async (req, res) => {
+  const { email } = req.query;
+  const role = await getUserRole(email);
+  res.json({ role });
+});
 
 // Dynamic GET route for all tables
 app.get('/api/:table', async (req, res) => {
@@ -336,6 +416,102 @@ app.get('/api/analytics/profitability', async (req, res) => {
   }
 });
 
+
+// ── Push Notification endpoints ───────────────────────────────────────────────
+import webPush from 'web-push';
+
+if (process.env.VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
+  webPush.setVapidDetails(
+    'mailto:admin@pigfarm.app',
+    process.env.VAPID_PUBLIC_KEY,
+    process.env.VAPID_PRIVATE_KEY
+  );
+}
+
+// POST /api/push/subscribe
+app.post('/api/push/subscribe', async (req, res) => {
+  const { email, subscription } = req.body;
+  if (!email || !subscription) return res.status(400).json({ error: 'email and subscription required' });
+  try {
+    await sql.query(
+      `INSERT INTO push_subscriptions (email, subscription) VALUES ($1, $2)
+       ON CONFLICT DO NOTHING`,
+      [email, JSON.stringify(subscription)]
+    );
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/push/unsubscribe
+app.post('/api/push/unsubscribe', async (req, res) => {
+  const { email } = req.body;
+  try {
+    await sql.query(`DELETE FROM push_subscriptions WHERE email = $1`, [email]);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// GET /api/notifications/upcoming — events due in next 7 days
+app.get('/api/notifications/upcoming', async (req, res) => {
+  try {
+    const withdrawals = await sql.query(
+      `SELECT 'Withdrawal Ending' AS type, animal_tag AS label, withdrawal_end_date AS due_date
+       FROM health_records
+       WHERE withdrawal_end_date IS NOT NULL
+         AND withdrawal_end_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '2 days'`
+    );
+    const farrowing = await sql.query(
+      `SELECT 'Farrowing Due' AS type, sow_tag AS label, expected_farrowing_date AS due_date
+       FROM breeding_records
+       WHERE expected_farrowing_date IS NOT NULL
+         AND expected_farrowing_date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '3 days'`
+    );
+    const vaccinations = await sql.query(
+      `SELECT 'Vaccination Due' AS type, animal_tag AS label, date AS due_date
+       FROM health_records
+       WHERE record_type = 'Vaccination'
+         AND date BETWEEN CURRENT_DATE AND CURRENT_DATE + INTERVAL '7 days'`
+    );
+    const all = [...withdrawals, ...farrowing, ...vaccinations]
+      .map(r => ({ ...r, due_date: r.due_date?.toString() }))
+      .sort((a, b) => new Date(a.due_date) - new Date(b.due_date));
+    res.json(all);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /api/notifications/send-due — send push notifications for due events
+app.post('/api/notifications/send-due', async (req, res) => {
+  try {
+    const upcoming = await (await fetch(`http://localhost:${process.env.PORT || 3001}/api/notifications/upcoming`)).json();
+    if (upcoming.length === 0) return res.json({ sent: 0 });
+    const subs = await sql.query(`SELECT subscription FROM push_subscriptions`);
+    let sent = 0;
+    for (const sub of subs) {
+      for (const event of upcoming) {
+        try {
+          await webPush.sendNotification(
+            sub.subscription,
+            JSON.stringify({
+              title: `🐷 ${event.type}`,
+              body: `${event.label} — Due: ${event.due_date}`,
+              url: '/health'
+            })
+          );
+          sent++;
+        } catch { /* stale subscription, ignore */ }
+      }
+    }
+    res.json({ sent });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 // For local testing
 if (process.env.NODE_ENV !== 'production') {
