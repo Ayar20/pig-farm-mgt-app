@@ -48,7 +48,7 @@ const ROLE_BADGE = {
   worker:  { label: 'Worker',  bg: '#1a2e1a', color: '#bbf7d0', border: '#22c55e' },
 };
 
-export default function Layout() {
+export default function Layout({ onSignOut, userEmail }) {
   const { role, isAdmin } = useRole();
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [notifications, setNotifications] = useState([]);
@@ -101,6 +101,32 @@ export default function Layout() {
           <span>⚠️ Offline Mode — Data will be saved locally and synced when connection is restored.</span>
         </div>
       )}
+
+      {/* Mobile Top Bar */}
+      <header className="mobile-header" style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: '0.75rem 1rem',
+        backgroundColor: 'var(--surface)',
+        borderBottom: '1px solid var(--border)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 90
+      }}>
+        <h2 style={{ color: 'var(--primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '1.1rem', margin: 0 }}>
+          <PiggyBank size={18} /> PigFarm Mgt
+        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <button 
+            onClick={onSignOut} 
+            className="btn btn-outline" 
+            style={{ padding: '0.35rem 0.65rem', fontSize: '0.75rem' }}
+          >
+            Sign Out
+          </button>
+        </div>
+      </header>
 
       <div style={{ display: 'flex', flex: 1, flexDirection: 'row', width: '100%' }}>
         <aside className="sidebar">
@@ -207,6 +233,30 @@ export default function Layout() {
               </NavLink>
             )}
           </nav>
+
+          {/* User Profile Section at bottom of Sidebar */}
+          <div style={{
+            marginTop: 'auto',
+            paddingTop: '1rem',
+            borderTop: '1px solid var(--border)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '0.75rem'
+          }}>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Logged in as</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: '600', color: 'var(--text-primary)', wordBreak: 'break-all' }} title={userEmail}>
+                {userEmail}
+              </span>
+            </div>
+            <button
+              onClick={onSignOut}
+              className="btn btn-outline"
+              style={{ width: '100%', padding: '0.4rem 0.75rem', fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+            >
+              Sign Out
+            </button>
+          </div>
         </aside>
 
         <main className="main-content">

@@ -394,3 +394,14 @@ tr:hover td {
   height: 1px;
   background: var(--border);
 }
+
+/* Responsive Mobile Header styling */
+.mobile-header {
+  display: flex !important;
+}
+@media (min-width: 768px) {
+  .mobile-header {
+    display: none !important;
+  }
+}
+

@@ -81,13 +81,8 @@ function App() {
   return (
     <RoleProvider userEmail={user?.email}>
     <BrowserRouter>
-      <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '1rem', position: 'absolute', top: 0, right: 0, zIndex: 100 }}>
-        <button onClick={handleSignOut} className="btn btn-outline" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}>
-          Sign Out ({user.email})
-        </button>
-      </div>
       <Routes>
-        <Route path="/" element={<Layout />}>
+        <Route path="/" element={<Layout onSignOut={handleSignOut} userEmail={user?.email} />}>
           <Route index element={<Dashboard />} />
           <Route path="stock" element={
             <RecordPage 
