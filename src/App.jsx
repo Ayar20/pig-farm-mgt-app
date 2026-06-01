@@ -162,6 +162,85 @@ function App() {
               ]}
             />
           } />
+          <Route path="animals" element={
+            <RecordPage 
+              title="Breeding Stock" 
+              tableName="individual_animals"
+              columns={[
+                { header: 'Ear Tag', accessor: 'ear_tag' },
+                { header: 'Gender', accessor: 'gender' },
+                { header: 'Breed', accessor: 'breed' },
+                { header: 'Date of Birth', accessor: 'dob' },
+                { header: 'Sire Tag', accessor: 'sire_tag' },
+                { header: 'Dam Tag', accessor: 'dam_tag' },
+                { header: 'Status', accessor: 'status' },
+                { header: 'Notes', accessor: 'notes' }
+              ]}
+            />
+          } />
+          <Route path="breeding" element={
+            <RecordPage 
+              title="Breeding Logs" 
+              tableName="breeding_records"
+              columns={[
+                { header: 'Sow Tag', accessor: 'sow_tag' },
+                { header: 'Boar Tag', accessor: 'boar_tag' },
+                { header: 'Service Date', accessor: 'service_date' },
+                { header: 'Pregnancy Check', accessor: 'pregnancy_check_date' },
+                { header: 'Pregnancy Status', accessor: 'pregnancy_status' },
+                { header: 'Expected Farrowing', accessor: 'expected_farrowing_date' },
+                { header: 'Actual Farrowing', accessor: 'actual_farrowing_date' },
+                { header: 'Weaning Date', accessor: 'weaning_date' },
+                { header: 'Notes', accessor: 'notes' }
+              ]}
+            />
+          } />
+          <Route path="health" element={
+            <RecordPage 
+              title="Health Logs" 
+              tableName="health_records"
+              columns={[
+                { header: 'Type', accessor: 'record_type' },
+                { header: 'Date', accessor: 'date' },
+                { header: 'Animal Tag', accessor: 'animal_tag' },
+                { header: 'Batch ID', accessor: 'batch' },
+                { header: 'Diagnosis', accessor: 'diagnostics' },
+                { header: 'Medication/Product', accessor: 'product_name' },
+                { header: 'Dosage', accessor: 'dosage' },
+                { header: 'Withdrawal (Days)', accessor: 'withdrawal_days' },
+                { header: 'Withdrawal End', accessor: 'withdrawal_end_date' },
+                { header: 'Notes', accessor: 'notes' }
+              ]}
+            />
+          } />
+          <Route path="feed-inventory" element={
+            <RecordPage 
+              title="Feed Inventory" 
+              tableName="feed_inventory"
+              columns={[
+                { header: 'Date', accessor: 'date' },
+                { header: 'Feed Type', accessor: 'feed_type' },
+                { header: 'Transaction', accessor: 'transaction_type' },
+                { header: 'Quantity (kg)', accessor: 'quantity_kg' },
+                { header: 'Cost', accessor: 'cost' },
+                { header: 'Notes', accessor: 'notes' }
+              ]}
+            />
+          } />
+          <Route path="weights" element={
+            <RecordPage 
+              title="Weight Records" 
+              tableName="weight_records"
+              columns={[
+                { header: 'Date', accessor: 'date' },
+                { header: 'Batch ID', accessor: 'batch' },
+                { header: 'Animal Tag', accessor: 'animal_tag' },
+                { header: 'Weight (kg)', accessor: 'weight_kg' },
+                { header: 'Stage', accessor: 'weighing_stage' },
+                { header: 'Notes', accessor: 'notes' }
+              ]}
+            />
+          } />
         </Route>
       </Routes>
     </BrowserRouter>

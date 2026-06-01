@@ -8,11 +8,21 @@ import {
   TrendingUp, 
   PackageOpen, 
   ArrowRightLeft, 
-  Users 
+  Users,
+  Dna,
+  CalendarDays,
+  HeartPulse,
+  Warehouse,
+  Scale
 } from 'lucide-react';
 
 const NavItems = [
   { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+  { path: '/animals', label: 'Breeding Stock', icon: <Dna size={20} /> },
+  { path: '/breeding', label: 'Breeding Logs', icon: <CalendarDays size={20} /> },
+  { path: '/health', label: 'Health Logs', icon: <HeartPulse size={20} /> },
+  { path: '/feed-inventory', label: 'Feed Stock', icon: <Warehouse size={20} /> },
+  { path: '/weights', label: 'Weights', icon: <Scale size={20} /> },
   { path: '/stock', label: 'Stock', icon: <PiggyBank size={20} /> },
   { path: '/management', label: 'Management', icon: <ClipboardList size={20} /> },
   { path: '/feeding', label: 'Feeding', icon: <Utensils size={20} /> },
@@ -50,7 +60,7 @@ export default function Layout() {
       </main>
 
       <nav className="bottom-nav">
-        {NavItems.slice(0, 5).map((item) => (
+        {NavItems.slice(0, 7).map((item) => (
           <NavLink 
             key={item.path} 
             to={item.path}
