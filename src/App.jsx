@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import RecordPage from './components/RecordPage';
 import LoginPage from './pages/LoginPage';
+import AnalyticsPage from './pages/AnalyticsPage';
 import { authClient } from './auth';
 
 function App() {
@@ -241,6 +242,7 @@ function App() {
               ]}
             />
           } />
+          <Route path="analytics" element={<AnalyticsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

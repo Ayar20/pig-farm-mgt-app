@@ -136,6 +136,111 @@ app.get('/api/analytics/fcr', async (req, res) => {
   }
 });
 
+// ── Analytics: Average Daily Gain (ADG) ───────────────────────────────────────
+// GET /api/analytics/adg?batch=BATCH_ID
+// OR  /api/analytics/adg?animal_tag=TAG
+app.get('/api/analytics/adg', async (req, res) => {
+  const { batch, animal_tag } = req.query;
+  if (!batch && !animal_tag) {
+    return res.status(400).json({ error: 'Either batch or animal_tag query parameter is required' });
+  }
+
+  try {
+    let queryResult;
+    if (batch) {
+      queryResult = await sql.query(
+        `SELECT 
+           MIN(date) as min_date,
+           MAX(date) as max_date,
+           (SELECT weight_kg FROM weight_records WHERE batch = $1 ORDER BY date ASC, id ASC LIMIT 1) as start_weight,
+           (SELECT weight_kg FROM weight_records WHERE batch = $1 ORDER BY date DESC, id DESC LIMIT 1) as end_weight
+         FROM weight_records 
+         WHERE batch = $1`,
+        [batch]
+      );
+    } else {
+      queryResult = await sql.query(
+        `SELECT 
+           MIN(date) as min_date,
+           MAX(date) as max_date,
+           (SELECT weight_kg FROM weight_records WHERE animal_tag = $1 ORDER BY date ASC, id ASC LIMIT 1) as start_weight,
+           (SELECT weight_kg FROM weight_records WHERE animal_tag = $1 ORDER BY date DESC, id DESC LIMIT 1) as end_weight
+         FROM weight_records 
+         WHERE animal_tag = $1`,
+        [animal_tag]
+      );
+    }
+
+    if (!queryResult || queryResult.length === 0 || !queryResult[0].min_date || !queryResult[0].max_date) {
+      return res.json({
+        batch: batch || null,
+        animal_tag: animal_tag || null,
+        start_weight_kg: 0,
+        end_weight_kg: 0,
+        weight_gained_kg: 0,
+        days_elapsed: 0,
+        adg: 'Insufficient weight data',
+        adg_interpretation: 'N/A',
+        history: []
+      });
+    }
+
+    const row = queryResult[0];
+    const minDateStr = row.min_date.toString();
+    const maxDateStr = row.max_date.toString();
+    const startWeight = parseFloat(row.start_weight || 0);
+    const endWeight = parseFloat(row.end_weight || 0);
+    
+    // Calculate difference in days
+    const d1 = new Date(minDateStr);
+    const d2 = new Date(maxDateStr);
+    const diffTime = Math.abs(d2 - d1);
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const weightGained = endWeight - startWeight;
+
+    let adg = null;
+    let adgInterpretation = 'N/A';
+
+    if (diffDays > 0) {
+      adg = parseFloat((weightGained / diffDays).toFixed(3));
+      adgInterpretation = adg >= 0.7 ? 'Excellent' : adg >= 0.5 ? 'Good' : 'Poor';
+    } else {
+      adg = 'Insufficient timeframe (same day logs)';
+    }
+
+    // Retrieve full weight history for graphing
+    let history;
+    if (batch) {
+      history = await sql.query(
+        `SELECT date, weight_kg, weighing_stage FROM weight_records WHERE batch = $1 ORDER BY date ASC, id ASC`,
+        [batch]
+      );
+    } else {
+      history = await sql.query(
+        `SELECT date, weight_kg, weighing_stage FROM weight_records WHERE animal_tag = $1 ORDER BY date ASC, id ASC`,
+        [animal_tag]
+      );
+    }
+
+    res.json({
+      batch: batch || null,
+      animal_tag: animal_tag || null,
+      start_date: minDateStr,
+      end_date: maxDateStr,
+      start_weight_kg: startWeight,
+      end_weight_kg: endWeight,
+      weight_gained_kg: parseFloat(weightGained.toFixed(2)),
+      days_elapsed: diffDays,
+      adg,
+      adg_interpretation: adgInterpretation,
+      history
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Database error' });
+  }
+});
+
 // For local testing
 if (process.env.NODE_ENV !== 'production') {
   const PORT = process.env.PORT || 3001;
