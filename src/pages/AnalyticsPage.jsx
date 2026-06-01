@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Scale, Warehouse, TrendingUp, Calendar, Info, RefreshCw, DollarSign, PiggyBank, ReceiptText, ArrowDownRight, ArrowUpRight } from 'lucide-react';
 import { apiFetch } from '../utils/api';
+import { generateAnalyticsPDF } from '../utils/pdf';
 
 export default function AnalyticsPage() {
   const [batches, setBatches] = useState([]);
@@ -206,7 +207,15 @@ export default function AnalyticsPage() {
         </div>
         
         {batches.length > 0 && (
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginLeft: 'auto', flexWrap: 'wrap' }}>
+            <button
+              className="btn btn-outline"
+              onClick={() => generateAnalyticsPDF(`${selectedBatch} Cohort Report (${activeTab === 'growth' ? 'Growth' : 'Financials'})`, 'analytics-panel')}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}
+              disabled={loading}
+            >
+              <ReceiptText size={16} /> Download PDF
+            </button>
             <label htmlFor="batch-select" style={{ margin: 0, whiteSpace: 'nowrap', fontWeight: '600' }}>Active Batch:</label>
             <select
               id="batch-select"
@@ -270,11 +279,12 @@ export default function AnalyticsPage() {
           </div>
 
           {/* Loading Indicator */}
-          {loading ? (
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '240px' }}>
-              <div className="spinner" style={{ borderColor: 'var(--primary)', borderTopColor: 'transparent', width: '28px', height: '28px' }}></div>
-            </div>
-          ) : activeTab === 'growth' ? (
+          <div id="analytics-panel" style={{ marginTop: '0.5rem' }}>
+            {loading ? (
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '240px' }}>
+                <div className="spinner" style={{ borderColor: 'var(--primary)', borderTopColor: 'transparent', width: '28px', height: '28px' }}></div>
+              </div>
+            ) : activeTab === 'growth' ? (
             /* TAB 1: GROWTH & FCR VIEW */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div className="dashboard-grid">
@@ -524,7 +534,8 @@ export default function AnalyticsPage() {
                 </div>
               </div>
             </div>
-          )}
+            )}
+          </div>
         </div>
       )}
     </div>

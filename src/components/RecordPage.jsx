@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, CloudOff } from 'lucide-react';
+import { Plus, Search, Filter, CloudOff, Printer } from 'lucide-react';
 import { apiFetch, apiPost } from '../utils/api';
+import { useRole } from '../context/RoleContext';
+import { printTable } from '../utils/pdf';
 
 export default function RecordPage({ title, tableName, columns }) {
+  const { isWorker } = useRole();
   const [data, setData] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,10 +69,17 @@ export default function RecordPage({ title, tableName, columns }) {
     <div className="animate-fade-in">
       <div className="page-header">
         <h1>{title}</h1>
-        <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
-          <Plus size={18} />
-          Add Record
-        </button>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <button className="btn btn-outline" onClick={() => printTable('print-region-' + tableName)} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.85rem' }}>
+            <Printer size={16} /> Print
+          </button>
+          {!isWorker && (
+            <button className="btn btn-primary" onClick={() => setIsModalOpen(true)}>
+              <Plus size={18} />
+              Add Record
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="card mb-6">
@@ -91,7 +101,11 @@ export default function RecordPage({ title, tableName, columns }) {
         </div>
       </div>
 
-      <div className="table-container">
+      <div className="table-container" id={`print-region-${tableName}`}>
+        <div className="print-header" style={{ display: 'none' }}>
+          <h2>🐷 PigFarm Management — {title}</h2>
+          <p>Generated: {new Date().toLocaleDateString()}</p>
+        </div>
         {isLoading ? (
           <div style={{ padding: '3rem', textAlign: 'center' }}>Loading...</div>
         ) : (
@@ -101,7 +115,7 @@ export default function RecordPage({ title, tableName, columns }) {
                 {columns.map((col, i) => (
                   <th key={i}>{col.header}</th>
                 ))}
-                <th>Actions</th>
+                {!isWorker && <th>Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -112,19 +126,19 @@ export default function RecordPage({ title, tableName, columns }) {
                       <td key={j}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                           <span>{
-                            col.accessor === 'date' && row[col.accessor] 
-                              ? new Date(row[col.accessor]).toLocaleDateString() 
+                            col.accessor === 'date' && row[col.accessor]
+                              ? new Date(row[col.accessor]).toLocaleDateString()
                               : row[col.accessor]
                           }</span>
                           {j === 0 && row._offline && (
-                            <span 
-                              className="badge badge-warning" 
-                              style={{ 
-                                fontSize: '0.65rem', 
-                                display: 'inline-flex', 
-                                alignItems: 'center', 
+                            <span
+                              className="badge badge-warning"
+                              style={{
+                                fontSize: '0.65rem',
+                                display: 'inline-flex',
+                                alignItems: 'center',
                                 gap: '0.25rem',
-                                padding: '0.125rem 0.375rem' 
+                                padding: '0.125rem 0.375rem'
                               }}
                             >
                               <CloudOff size={10} /> Pending Sync
@@ -133,15 +147,17 @@ export default function RecordPage({ title, tableName, columns }) {
                         </div>
                       </td>
                     ))}
-                    <td>
-                      <button 
-                        className="btn btn-outline" 
-                        style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}
-                        disabled={row._offline}
-                      >
-                        Edit
-                      </button>
-                    </td>
+                    {!isWorker && (
+                      <td>
+                        <button
+                          className="btn btn-outline"
+                          style={{ padding: '0.25rem 0.75rem', fontSize: '0.75rem' }}
+                          disabled={row._offline}
+                        >
+                          Edit
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))
               ) : (

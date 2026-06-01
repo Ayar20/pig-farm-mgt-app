@@ -1,0 +1,109 @@
+/* Print Stylesheet for PigFarm Management System */
+
+@media print {
+  /* Hide sidebar, navigation, search filters, and action buttons */
+  aside,
+  nav,
+  .sidebar,
+  .bottom-nav,
+  .btn,
+  button,
+  .page-header button,
+  .card,
+  input,
+  select,
+  [class*="offline"],
+  .sync-warning {
+    display: none !important;
+  }
+
+  /* Reset body and background for printing */
+  body, 
+  #root,
+  main,
+  .main-content {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+    width: 100% !important;
+  }
+
+  /* Show the hidden print header */
+  .print-header {
+    display: block !important;
+    visibility: visible !important;
+    margin-bottom: 2rem !important;
+    border-bottom: 2px solid #374151 !important;
+    padding-bottom: 1rem !important;
+  }
+
+  .print-header h2 {
+    margin: 0 0 0.5rem 0 !important;
+    color: #111827 !important;
+    font-size: 1.75rem !important;
+    font-family: Arial, sans-serif !important;
+  }
+
+  .print-header p {
+    margin: 0 !important;
+    color: #4b5563 !important;
+    font-size: 0.875rem !important;
+  }
+
+  /* Style tables specifically for print readability */
+  .table-container {
+    box-shadow: none !important;
+    border: none !important;
+    background: transparent !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+  }
+
+  table {
+    width: 100% !important;
+    border-collapse: collapse !important;
+    page-break-inside: auto !important;
+  }
+
+  tr {
+    page-break-inside: avoid !important;
+    page-break-after: auto !important;
+  }
+
+  thead {
+    display: table-header-group !important;
+  }
+
+  th {
+    background-color: #f3f4f6 !important;
+    color: #111827 !important;
+    border: 1px solid #d1d5db !important;
+    padding: 8px 12px !important;
+    font-size: 0.875rem !important;
+    font-weight: bold !important;
+    text-align: left !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  td {
+    border: 1px solid #e5e7eb !important;
+    padding: 8px 12px !important;
+    font-size: 0.85rem !important;
+    color: #1f2937 !important;
+  }
+
+  /* Ensure actions column or hidden columns do not leave empty th/td */
+  th:last-child,
+  td:last-child {
+    /* If the last column was 'Actions' and got hidden, we might need to handle it or let CSS hide it */
+  }
+
+  /* Page break helpers */
+  .page-break {
+    page-break-before: always !important;
+  }
+}
