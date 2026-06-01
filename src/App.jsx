@@ -5,8 +5,12 @@ import Dashboard from './pages/Dashboard';
 import RecordPage from './components/RecordPage';
 import LoginPage from './pages/LoginPage';
 import AnalyticsPage from './pages/AnalyticsPage';
+import AdminUsersPage from './pages/AdminUsersPage';
+import ProtectedRoute from './components/ProtectedRoute';
+import { RoleProvider } from './context/RoleContext';
 import { authClient } from './auth';
 import { syncOfflineQueue } from './utils/api';
+import { requestPushPermission } from './utils/push';
 
 function App() {
   const [session, setSession] = useState(null);
@@ -32,6 +36,12 @@ function App() {
   useEffect(() => {
     syncOfflineQueue().catch(err => console.error('Initial offline sync failed:', err));
   }, []);
+
+  useEffect(() => {
+    if (user?.email) {
+      requestPushPermission(user.email).catch(err => console.error('Push registration error:', err));
+    }
+  }, [user?.email]);
 
   const handleAuthenticated = (newSession, newUser) => {
     setSession(newSession);
@@ -69,6 +79,7 @@ function App() {
   }
 
   return (
+    <RoleProvider userEmail={user?.email}>
     <BrowserRouter>
       <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '1rem', position: 'absolute', top: 0, right: 0, zIndex: 100 }}>
         <button onClick={handleSignOut} className="btn btn-outline" style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}>
@@ -262,9 +273,15 @@ function App() {
             />
           } />
           <Route path="analytics" element={<AnalyticsPage />} />
+          <Route path="admin/users" element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <AdminUsersPage />
+            </ProtectedRoute>
+          } />
         </Route>
       </Routes>
     </BrowserRouter>
+    </RoleProvider>
   );
 }
 
